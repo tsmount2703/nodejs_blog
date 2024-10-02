@@ -1,0 +1,262 @@
+<head>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css" rel="stylesheet">
+</head>
+
+<form class="mt-4" id="container-form" method="POST" action="/courses/handle-actions-forms">
+  <div class="d-flex flex-row justify-content-between">
+    <h3>Khóa học của tôi</h3>
+    <div class="trash-container">
+      <a href="/me/trash/courses"><i
+          class="bi bi-trash2-fill trash"
+          style="font-size: 2rem; color:green "
+        ></i></a>
+      <p class="trash-count">{{deletedCount}}</p>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex align-items-center gap-3">
+    <div class="form-check">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        value=""
+        id="checked-all"
+      />
+      <label class="form-check-label" for="flexCheckDefault" id="checked-all">
+        Selected All
+      </label>
+    </div>
+
+    <select class="form-control-sm checkbox-all-select-options" name="actions" required>
+      <option value="">--- Choose Actions ---</option>
+      <option value="delete">Delete</option>
+      <option value="another">Another</option>
+    </select>
+
+    <button type="submit" class="btn btn-success btn-sm btn-checked-all fw-semibold" disabled>Execute</button>
+  </div>
+
+  <table class="table mt-4">
+    <thead>
+      {{#if courses}}
+        <tr class="text-center">
+          <th scope="col"></th>
+          <th scope="col">ID
+
+            {{{sortable "_id" _sort}}}
+          </th>
+          <th scope="col">
+            Name
+           {{{sortable "name" _sort}}}
+            </th>
+          <th scope="col">Description</th>
+          {{! <th scope="col">Image</th> }}
+          <th scope="col">Level 
+            {{{sortable "level" _sort}}}
+          </th>
+          <th scope="col">Created At
+            {{{sortable "createdAt" _sort}}}
+          </th>
+          <th scope="col">Handle</th>
+        </tr>
+      {{else}}
+        <p></p>
+      {{/if}}
+    </thead>
+    <tbody>
+      {{#each courses}}
+        <tr>
+          <td>
+            <div class="form-check">
+              <input
+                class="form-check-input checked-selected"
+                type="checkbox"
+                {{! ghi [] dang sau name de nhan biet dc gia tri nhan ve la mang }}
+                name="coursesIds[]"
+                value="{{this._id}}"
+              />
+            </div>
+          </td>
+          <th scope="row">{{this._id}}</th>
+          <td>{{this.name}}</td>
+          <td>{{this.description}}</td>
+          {{!-- <td><img src={{this.image}} alt={{this.name}} /></td> --}}
+          <td>{{this.level}}</td>
+          <td>{{this.createdAt}}</td>
+          <td>
+            <div class="d-flex flex-row gap-2  justify-content-center">
+               <a
+                  href="/courses/{{this._id}}/edit"
+                  class="btn btn-success fw-semibold"
+               >Update</a>
+               <a
+                  href="#"
+                  class="btn btn-outline-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#delete-course-modal"
+                  data-bs-id="{{this._id}}"
+               >Clear</a>
+            </div>
+           
+          </td>
+        </tr>
+
+      {{else}}
+        <tr>
+          <td colspan="7" class="text-center">No courses found.
+            <a href="/courses/create">Upload new course</a></td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</form>
+
+<!-- Modal -->
+<div
+  class="modal fade"
+  id="delete-course-modal"
+  tabindex="-1"
+  aria-labelledby="exampleModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel">Clear this course ?</h1>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete this course?
+      </div>
+      <div class="modal-footer">
+        <button
+          id="btn-delete"
+          type="button"
+          class="btn btn-danger"
+        >Delete</button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-bs-dismiss="modal"
+        >Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" tabindex="-1" id="delete-check-all-course-modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Clear all courses ?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you clear all courses?</p>
+
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-danger" id="delete-all-btn">Delete All</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{!-- --}}
+
+{{! Form Delete }}
+
+<form id="delete-form" method="POST"></form>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const deleteCourseModal = document.getElementById('delete-course-modal');
+    const deleteBtn = document.getElementById('btn-delete');
+    const deleteForm = document.getElementById("delete-form");
+    const containerForm = $('form[id="container-form"]');
+    const checkedAll = document.getElementById("checked-all");
+    const checkedAllSubmitBtn = $('.btn-checked-all');
+    const selectOptions = document.querySelector('.form-control-sm.checkbox-all-select-options');
+    const checkedSelected = $('input[name="coursesIds[]"]');
+    const deleteAllBtn = document.getElementById('delete-all-btn');
+    let courseId;
+
+    if (deleteCourseModal) {
+        // Listen for the modal to show
+        deleteCourseModal.addEventListener('show.bs.modal', event => {
+            const button = event.relatedTarget;
+            courseId = button.getAttribute('data-bs-id');
+            deleteBtn.onclick = function () {
+                // Set form action URL including courseId and method override for DELETE
+                deleteForm.action = "/courses/" + courseId + "?_method=DELETE";
+                deleteForm.submit();
+            };
+        });
+    }
+
+    // Check all checkboxes
+    if (checkedAll) {
+        checkedAll.onchange = function () {
+            const isCheckedAll = $(this).prop('checked');
+            $(checkedSelected).prop("checked", isCheckedAll);
+            renderCheckedAllSubmitBtn();
+        };
+    }
+
+    // Handle individual checkbox changes
+    if (checkedSelected.length) {
+        checkedSelected.change(function () {
+            const isCheckedAll = $(checkedSelected).length === $('input[name="coursesIds[]"]:checked').length;
+            $(checkedAll).prop("checked", isCheckedAll);
+            renderCheckedAllSubmitBtn();
+        });
+    }
+
+    // Handle the select option changes
+    if (selectOptions) {
+        selectOptions.onchange = function () {
+            if (selectOptions.value === "delete") {
+                $(checkedAllSubmitBtn).attr('data-bs-target', "#delete-check-all-course-modal");
+                $(checkedAllSubmitBtn).attr('data-bs-toggle', "modal");
+                $(checkedAllSubmitBtn).attr('type', "button");
+
+                deleteAllBtn.onclick = function () {
+                    containerForm.submit();
+                };
+            } else {
+                $(checkedAllSubmitBtn).removeAttr('data-bs-target');
+                $(checkedAllSubmitBtn).removeAttr('data-bs-toggle');
+                $(checkedAllSubmitBtn).attr('type', "submit");
+
+                containerForm.on("submit", function (e) {
+                    const isSubmittable = !checkedAllSubmitBtn.prop('disabled');
+                    if (!isSubmittable) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        };
+    }
+
+    // Re-render checked all submit button based on selected checkboxes
+    function renderCheckedAllSubmitBtn() {
+        const checkedAllCounts = $('input[name="coursesIds[]"]:checked').length;
+        if (checkedAllCounts > 0) {
+            checkedAllSubmitBtn.removeAttr("disabled");
+        } else {
+            checkedAllSubmitBtn.attr("disabled", "disabled");
+        }
+    }
+});
+
+ 
+</script>
